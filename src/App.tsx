@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RiskProfile, RiskScores, calculateRisk } from '@/lib/riskEngine';
 import { AIAnalysis as AIAnalysisType, generateAIAnalysis } from '@/lib/gemini';
 import { RiskScoreMeter } from '@/components/dashboard/RiskScoreMeter';
@@ -11,17 +11,24 @@ import { DashboardTab } from '@/components/dashboard/DashboardTab';
 import { PricingTab } from '@/components/dashboard/PricingTab';
 import { ResumeBuilder } from '@/components/dashboard/ResumeBuilder';
 import { AuthScreen } from '@/components/auth/AuthScreen';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+import { CareerPath } from '@/components/career-path/CareerPath';
+import { ProfileTab } from '@/components/profile/ProfileTab';
+import { LinkedInTab } from '@/components/linkedin/LinkedInTab';
+import { createClient } from '@/utils/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LinkedInTab } from '@/components/linkedin/LinkedInTab';
-import { Loader2, ShieldAlert, RefreshCw, LayoutDashboard, Target, History, Settings, LogOut, CreditCard, FileText, Linkedin } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User as UserIcon, Loader2, ShieldAlert, RefreshCw, LayoutDashboard, Target, History, Settings, LogOut, CreditCard, FileText, Navigation, Linkedin } from 'lucide-react';
+
+const supabase = createClient();
 
 export function MainApp() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings' | 'linkedin'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings' | 'career-path' | 'profile' | 'linkedin'>('profile');
   const [profile, setProfile] = useState<RiskProfile>({
     industry: '',
     role: '',
@@ -35,12 +42,6 @@ export function MainApp() {
   const [analysis, setAnalysis] = useState<AIAnalysisType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedHistoricalAssessment, setSelectedHistoricalAssessment] = useState<any>(null);
-
-  const handleSelectHistoricalAssessment = (assessment: any) => {
-    setSelectedHistoricalAssessment(assessment);
-    setActiveTab('ats');
-  };
 
   const handleAddSkill = () => {
     if (currentSkill.trim() && !profile.skills.includes(currentSkill.trim())) {
@@ -68,28 +69,6 @@ export function MainApp() {
       
       const aiResult = await generateAIAnalysis(profile, calculatedScores);
       setAnalysis(aiResult);
-
-      // Save risk assessment to backend
-      const token = localStorage.getItem('token');
-      if (token) {
-        await fetch('/api/risk/save', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            id: crypto.randomUUID(),
-            industry: profile.industry,
-            role: profile.role,
-            skills: profile.skills,
-            experience: profile.experience,
-            companyStatus: profile.companyStatus,
-            totalScore: calculatedScores.totalScore,
-            level: calculatedScores.level
-          })
-        }).catch(err => console.error("Failed to save risk assessment", err));
-      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "An error occurred during analysis.");
@@ -122,6 +101,27 @@ export function MainApp() {
             
             <nav className="hidden md:flex items-center gap-1">
               <button 
+                onClick={() => setActiveTab('profile')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'profile' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+              >
+                <UserIcon className="w-4 h-4" />
+                Profile
+              </button>
+              <button 
+                onClick={() => setActiveTab('linkedin')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'linkedin' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+              >
+                <Linkedin className="w-4 h-4" />
+                LinkedIn
+              </button>
+              <button 
+                onClick={() => setActiveTab('career-path')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'career-path' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+              >
+                <Navigation className="w-4 h-4" />
+                Career Path
+              </button>
+              <button 
                 onClick={() => setActiveTab('dashboard')}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
               >
@@ -141,13 +141,6 @@ export function MainApp() {
               >
                 <Target className="w-4 h-4" />
                 ATS Optimizer
-              </button>
-              <button 
-                onClick={() => setActiveTab('linkedin')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'linkedin' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
-              >
-                <Linkedin className="w-4 h-4" />
-                LinkedIn
               </button>
               <button 
                 onClick={() => setActiveTab('builder')}
@@ -340,19 +333,19 @@ export function MainApp() {
             </div>
           )
         ) : activeTab === 'ats' ? (
-          <ATSOptimizer 
-            onNavigate={setActiveTab} 
-            initialAssessment={selectedHistoricalAssessment}
-            onClearInitial={() => setSelectedHistoricalAssessment(null)}
-          />
+          <ATSOptimizer onNavigate={setActiveTab} />
         ) : activeTab === 'builder' ? (
           <ResumeBuilder />
-        ) : activeTab === 'linkedin' ? (
-          <LinkedInTab />
         ) : activeTab === 'history' ? (
-          <HistoryTab onSelectAssessment={handleSelectHistoricalAssessment} />
+          <HistoryTab />
         ) : activeTab === 'pricing' ? (
           <PricingTab />
+        ) : activeTab === 'career-path' ? (
+          <CareerPath onNavigate={setActiveTab as any} />
+        ) : activeTab === 'profile' ? (
+          <ProfileTab />
+        ) : activeTab === 'linkedin' ? (
+          <LinkedInTab />
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -368,12 +361,27 @@ export function MainApp() {
 }
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (user && session) {
+      supabase.from('career_profiles').select('onboarding_completed').eq('user_id', user.id).single()
+      .then(({ data }) => setOnboardingCompleted(data?.onboarding_completed || false))
+      ;// Ignore error
+
+    }
+  }, [user, session]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
   }
 
-  return user ? <MainApp /> : <AuthScreen />;
+  if (!user) return <AuthScreen />;
+  
+  if (onboardingCompleted === null) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  if (!onboardingCompleted) return <OnboardingFlow onComplete={() => setOnboardingCompleted(true)} />;
+
+  return <MainApp />;
 }
 

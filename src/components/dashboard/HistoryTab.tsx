@@ -2,35 +2,43 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Calendar, ArrowRight, Target, History } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 interface Assessment {
   id: string;
   resume_text: string;
   job_description: string;
-  ats_score_before: number;
-  ats_score_after: number;
-  match_level: string;
+  overall_score: number;
+  ats_score: number;
   created_at: string;
 }
 
-export function HistoryTab({ onSelectAssessment }: { onSelectAssessment: (assessment: any) => void }) {
+export function HistoryTab() {
+  const { token } = useAuth();
   const [history, setHistory] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!token) return;
+
     fetch('/api/ats/history', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
-        setHistory(data);
+        if (Array.isArray(data)) {
+          setHistory(data);
+        } else {
+          console.error('Expected array but got:', data);
+          setHistory([]);
+        }
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [token]);
 
   if (loading) {
     return <div className="flex justify-center py-20">Loading history...</div>;
@@ -51,7 +59,7 @@ export function HistoryTab({ onSelectAssessment }: { onSelectAssessment: (assess
       <h2 className="text-2xl font-bold text-gray-900">Optimization History</h2>
       <div className="grid grid-cols-1 gap-4">
         {history.map((item) => (
-          <Card key={item.id} onClick={() => onSelectAssessment(item)} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+          <Card key={item.id} className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -60,27 +68,22 @@ export function HistoryTab({ onSelectAssessment }: { onSelectAssessment: (assess
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900 line-clamp-1 max-w-md">
-                      {item.job_description.substring(0, 60)}...
+                      ATS Optimized Resume
                     </h4>
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex items-center gap-1 text-xs text-gray-400">
                         <Calendar className="w-3 h-3" />
                         {new Date(item.created_at).toLocaleDateString()}
                       </div>
-                      <Badge variant="outline" className="text-[10px] uppercase">
-                        {item.match_level} Match
-                      </Badge>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-8">
                   <div className="text-right">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">ATS Score</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Final ATS Score</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-400">{item.ats_score_before}</span>
-                      <ArrowRight className="w-4 h-4 text-gray-300" />
-                      <span className="text-lg font-bold text-emerald-600">{item.ats_score_after}</span>
+                      <span className="text-lg font-bold text-emerald-600">{item.overall_score || item.ats_score || 0}</span>
                     </div>
                   </div>
                   <Target className="w-5 h-5 text-gray-300" />

@@ -8,9 +8,12 @@ import { ChevronDown, ChevronUp, Plus, X, Printer, Loader2, Sparkles, Upload, Do
 import { analyzeATS, parseResumeToJSON, ATSAnalysis, generateHeatmap, HeatmapLine } from '@/lib/gemini';
 import { downloadResumeDocx } from '@/lib/docxGenerator';
 
+import { useAuth } from '@/lib/auth';
+
 type TemplateType = 'classic' | 'modern' | 'minimal';
 
 export function ResumeBuilder() {
+  const { token } = useAuth();
   const [template, setTemplate] = useState<TemplateType>('classic');
   const [personal, setPersonal] = useState({
     firstName: '', lastName: '', jobTitle: '', email: '', phone: '', location: '', website: '', summary: ''
@@ -113,7 +116,6 @@ export function ResumeBuilder() {
       setAnalysis(result);
 
       // Save version to backend
-      const token = localStorage.getItem('token');
       if (token) {
         await fetch('/api/resume/version', {
           method: 'POST',

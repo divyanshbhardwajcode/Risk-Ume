@@ -1,35 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
 
 export function PricingTab() {
-  const { user, login } = useAuth();
-
-  const handleUpgrade = async (tierKey: string) => {
-    if (!user) return;
-    try {
-      const response = await fetch('/api/auth/upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ tier: tierKey })
-      });
-      if (!response.ok) throw new Error('Upgrade failed');
-      const data = await response.json();
-      login(data.token, data.user);
-      alert(`Successfully upgraded to ${tierKey === 'pro' ? 'Pro' : tierKey === 'career_pro' ? 'Career Pro' : 'Free'}!`);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to upgrade plan. Please try again.');
-    }
-  };
-
   const tiers = [
     {
-      key: 'free',
       name: 'Free',
       price: '$0',
       description: 'Basic tools to get started.',
@@ -38,12 +13,10 @@ export function PricingTab() {
         'Basic risk score',
         'Limited suggestions'
       ],
-      buttonText: user?.subscription_tier === 'free' ? 'Current Plan' : 'Select Free',
-      buttonVariant: user?.subscription_tier === 'free' ? 'outline' : 'secondary',
-      disabled: user?.subscription_tier === 'free'
+      buttonText: 'Current Plan',
+      buttonVariant: 'outline'
     },
     {
-      key: 'pro',
       name: 'Pro',
       price: '$12',
       period: '/month',
@@ -55,13 +28,11 @@ export function PricingTab() {
         'Interview probability score',
         'Weekly market updates'
       ],
-      buttonText: user?.subscription_tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro',
-      buttonVariant: user?.subscription_tier === 'pro' ? 'outline' : 'default',
-      disabled: user?.subscription_tier === 'pro',
+      buttonText: 'Upgrade to Pro',
+      buttonVariant: 'default',
       popular: true
     },
     {
-      key: 'career_pro',
       name: 'Career Pro',
       price: '$29',
       period: '/month',
@@ -73,9 +44,8 @@ export function PricingTab() {
         'Priority AI analysis',
         'Everything in Pro'
       ],
-      buttonText: user?.subscription_tier === 'career_pro' ? 'Current Plan' : 'Upgrade to Career Pro',
-      buttonVariant: user?.subscription_tier === 'career_pro' ? 'outline' : 'outline',
-      disabled: user?.subscription_tier === 'career_pro'
+      buttonText: 'Upgrade to Career Pro',
+      buttonVariant: 'outline'
     }
   ];
 
@@ -121,9 +91,7 @@ export function PricingTab() {
               </ul>
               <Button 
                 variant={tier.buttonVariant as any} 
-                className={`w-full h-12 text-lg font-bold ${tier.popular && !tier.disabled ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                onClick={() => !tier.disabled && handleUpgrade(tier.key)}
-                disabled={tier.disabled}
+                className={`w-full h-12 text-lg font-bold ${tier.popular ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
               >
                 {tier.buttonText}
               </Button>

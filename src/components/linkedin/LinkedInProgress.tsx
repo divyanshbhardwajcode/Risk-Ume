@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LinkedInImport } from '@/types/linkedin';
+import { useAuth } from '@/lib/auth';
 
 export function LinkedInProgress({ 
   importId, 
@@ -12,14 +13,16 @@ export function LinkedInProgress({
   onError: () => void 
 }) {
   const [status, setStatus] = useState<LinkedInImport | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
+    if (!token) return;
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/linkedin/import/${importId}/status`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        const res = await fetch(`/api/linkedin/status/${importId}`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
@@ -29,8 +32,8 @@ export function LinkedInProgress({
             clearInterval(interval);
             // Fetch the completed profile and audit
             const [profileRes, auditRes] = await Promise.all([
-              fetch('/api/linkedin/profile', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-              fetch('/api/linkedin/audit', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+              fetch('/api/linkedin/profile', { headers: { Authorization: `Bearer ${token}` } }),
+              fetch('/api/linkedin/audit', { headers: { Authorization: `Bearer ${token}` } })
             ]);
             if (profileRes.ok && auditRes.ok) {
               onComplete(await profileRes.json(), await auditRes.json());

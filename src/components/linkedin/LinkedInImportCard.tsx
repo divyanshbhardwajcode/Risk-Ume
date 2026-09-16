@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, FileText, ClipboardList, Loader2 } from 'lucide-react';
+import { UploadCloud, FileText, ClipboardList, Loader2, ShieldAlert, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 export function LinkedInImportCard({ onUploadStart }: { onUploadStart: (importId: string) => void }) {
   const [tab, setTab] = useState<'upload' | 'paste'>('upload');
@@ -8,6 +9,7 @@ export function LinkedInImportCard({ onUploadStart }: { onUploadStart: (importId
   const [pasteText, setPasteText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { token } = useAuth();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,7 +44,7 @@ export function LinkedInImportCard({ onUploadStart }: { onUploadStart: (importId
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ fileBase64: base64, fileName: file.name, source: 'pdf' })
         });
@@ -67,7 +69,7 @@ export function LinkedInImportCard({ onUploadStart }: { onUploadStart: (importId
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ fileBase64: pasteText, fileName: 'pasted_profile.txt', source: 'paste' })
       });

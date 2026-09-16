@@ -3,16 +3,18 @@ import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, TrendingUp, ShieldAlert, Target, Activity, CheckCircle2, AlertCircle, FileText, Linkedin } from 'lucide-react';
+import { ArrowRight, TrendingUp, ShieldAlert, Target, Activity, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 
-export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats' | 'linkedin') => void }) {
-  const { user } = useAuth();
+export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats') => void }) {
+  const { user, token } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!token) return;
+
     fetch('/api/dashboard', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(resData => {
@@ -23,7 +25,7 @@ export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats' 
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [token]);
 
   if (loading) {
     return <div className="flex justify-center py-20">Loading dashboard...</div>;
@@ -32,9 +34,7 @@ export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats' 
   const latest = data?.latestAssessment;
   const healthScore = latest?.resume_health || 0;
   const atsScore = latest?.ats_score_after || 0;
-  const riskLevel = data?.latestRisk 
-    ? (data.latestRisk.level.charAt(0).toUpperCase() + data.latestRisk.level.slice(1)) 
-    : 'Unknown';
+  const riskLevel = latest ? 'Moderate' : 'Unknown';
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -153,17 +153,15 @@ export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats' 
                 </Badge>
               </div>
               
-              {data?.weeklyTrends.relatedTrends?.map((trend: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
-                  <div>
-                    <p className="font-medium text-gray-900">{trend.name} Demand</p>
-                    <p className="text-sm text-gray-500">Related technology</p>
-                  </div>
-                  <Badge className={`${trend.change.startsWith('+') ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-700 hover:bg-red-200'} border-0`}>
-                    {trend.change}
-                  </Badge>
+              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+                <div>
+                  <p className="font-medium text-gray-900">Docker Demand</p>
+                  <p className="text-sm text-gray-500">Related technology</p>
                 </div>
-              ))}
+                <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-0">
+                  -3%
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -206,22 +204,6 @@ export function DashboardTab({ onNavigate }: { onNavigate: (tab: 'risk' | 'ats' 
               <p className="text-xs text-gray-400 mt-4 text-center">
                 Based on ATS score, skill alignment, and role demand.
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md bg-gradient-to-br from-[#07111F] to-[#1E3A5F] text-white">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Linkedin className="w-5 h-5 text-[#60A5FA]" /> LinkedIn Sync
-                  </h3>
-                  <p className="text-sm text-[#94A3B8] mt-1">Connect your profile for recruiter visibility analysis.</p>
-                </div>
-              </div>
-              <Button onClick={() => onNavigate('linkedin')} className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white border-0">
-                Audit LinkedIn Profile <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
             </CardContent>
           </Card>
         </div>

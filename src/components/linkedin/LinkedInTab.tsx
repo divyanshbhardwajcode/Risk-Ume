@@ -3,6 +3,7 @@ import { ShieldAlert, LogOut, ArrowLeft, Target, FileText, CheckCircle2, Trendin
 import { LinkedInImportCard } from './LinkedInImportCard';
 import { LinkedInProgress } from './LinkedInProgress';
 import { LinkedInAudit } from './LinkedInAudit';
+import { useAuth } from '@/lib/auth';
 
 export function LinkedInTab() {
   const [importStatus, setImportStatus] = useState<any>(null);
@@ -10,13 +11,16 @@ export function LinkedInTab() {
   const [audit, setAudit] = useState<any>(null);
   const [view, setView] = useState<'import' | 'progress' | 'audit'>('import');
 
+  const { token } = useAuth();
+
   // Load existing profile/audit on mount
   useEffect(() => {
     const loadExisting = async () => {
+      if (!token) return;
       try {
         const [profileRes, auditRes] = await Promise.all([
-          fetch('/api/linkedin/profile', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-          fetch('/api/linkedin/audit', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+          fetch('/api/linkedin/profile', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/linkedin/audit', { headers: { Authorization: `Bearer ${token}` } })
         ]);
         
         if (profileRes.ok && auditRes.ok) {
@@ -33,7 +37,7 @@ export function LinkedInTab() {
       }
     };
     loadExisting();
-  }, []);
+  }, [token]);
 
   const handleUploadStart = (importId: string) => {
     setImportStatus({ id: importId, status: 'queued', progress: 0 });
@@ -45,7 +49,7 @@ export function LinkedInTab() {
     try {
       await fetch('/api/linkedin/profile', {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       setProfile(null);
       setAudit(null);

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { LinkedInRewrite } from '@/types/linkedin';
 import { Check, X, ArrowRightLeft } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 export function LinkedInRewrites({ rewrites }: { rewrites: LinkedInRewrite[] }) {
   const [decisions, setDecisions] = useState<Record<number, 'accept' | 'reject' | null>>({});
+  const { token } = useAuth();
 
   const handleDecision = (index: number, decision: 'accept' | 'reject') => {
     setDecisions(prev => ({ ...prev, [index]: decision }));
@@ -58,6 +60,38 @@ export function LinkedInRewrites({ rewrites }: { rewrites: LinkedInRewrite[] }) 
           </div>
         </div>
       ))}
+      
+      {Object.values(decisions).includes('accept') && (
+        <div className="flex justify-end mt-4">
+          <button 
+            onClick={async () => {
+              const approvedData: any = {};
+              rewrites.forEach((rewrite, i) => {
+                if (decisions[i] === 'accept') {
+                  const sec = rewrite.section.toLowerCase();
+                  if (sec.includes('headline')) approvedData['personal'] = { headline: rewrite.recommended };
+                  if (sec.includes('about') || sec.includes('summary')) approvedData['summary'] = rewrite.recommended;
+                  // For simplicity, just updating summary/headline here. More complex merges require deeper merging logic.
+                }
+              });
+              
+              try {
+                const res = await fetch('/api/linkedin/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ approvedData })
+                });
+                if (res.ok) alert('Successfully synced changes to Career Profile!');
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            className="px-6 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+          >
+            <Check className="w-4 h-4" /> Sync Approved Changes
+          </button>
+        </div>
+      )}
     </div>
   );
 }

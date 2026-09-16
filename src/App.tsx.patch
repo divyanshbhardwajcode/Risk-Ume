@@ -1,0 +1,80 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -1,4 +1,4 @@
+-import { useState } from 'react';
++import { useState, useEffect } from 'react';
+ import { RiskProfile, RiskScores, calculateRisk } from '@/lib/riskEngine';
+ import { AIAnalysis as AIAnalysisType, generateAIAnalysis } from '@/lib/gemini';
+ import { RiskScoreMeter } from '@/components/dashboard/RiskScoreMeter';
+@@ -11,6 +11,9 @@
+ import { PricingTab } from '@/components/dashboard/PricingTab';
+ import { ResumeBuilder } from '@/components/dashboard/ResumeBuilder';
+ import { AuthScreen } from '@/components/auth/AuthScreen';
++import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
++import { CareerPath } from '@/components/career-path/CareerPath';
++import { createClient } from '@/utils/supabase/client';
+ import { useAuth } from '@/lib/auth';
+ import { Button } from '@/components/ui/button';
+ import { Input } from '@/components/ui/input';
+@@ -18,9 +21,11 @@
+ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+ import { Badge } from '@/components/ui/badge';
+-import { Loader2, ShieldAlert, RefreshCw, LayoutDashboard, Target, History, Settings, LogOut, CreditCard, FileText } from 'lucide-react';
++import { Loader2, ShieldAlert, RefreshCw, LayoutDashboard, Target, History, Settings, LogOut, CreditCard, FileText, Navigation } from 'lucide-react';
++
++const supabase = createClient();
+ 
+ export function MainApp() {
+   const { user, logout } = useAuth();
+-  const [activeTab, setActiveTab] = useState<'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings'>('dashboard');
++  const [activeTab, setActiveTab] = useState<'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings' | 'career-path'>('career-path');
+   const [profile, setProfile] = useState<RiskProfile>({
+     industry: '',
+@@ -95,6 +100,13 @@
+             <nav className="hidden md:flex items-center gap-1">
+               <button 
++                onClick={() => setActiveTab('career-path')}
++                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'career-path' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
++              >
++                <Navigation className="w-4 h-4" />
++                Career Path
++              </button>
++              <button 
+                 onClick={() => setActiveTab('dashboard')}
+                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}
+               >
+@@ -314,6 +326,8 @@
+         ) : activeTab === 'pricing' ? (
+           <PricingTab />
++        ) : activeTab === 'career-path' ? (
++          <CareerPath onNavigate={setActiveTab as any} />
+         ) : (
+           <div className="flex flex-col items-center justify-center py-20 text-center">
+             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+@@ -327,11 +341,23 @@
+ 
+ export default function App() {
+-  const { user, loading } = useAuth();
++  const { user, loading, session } = useAuth();
++  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
++
++  useEffect(() => {
++    if (user && session) {
++      supabase.from('career_profiles').select('onboarding_completed').eq('user_id', user.id).single()
++      .then(({ data }) => setOnboardingCompleted(data?.onboarding_completed || false))
++      .catch(() => setOnboardingCompleted(false));
++    }
++  }, [user, session]);
+ 
+   if (loading) {
+     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
+   }
+ 
+-  return user ? <MainApp /> : <AuthScreen />;
++  if (!user) return <AuthScreen />;
++  
++  if (onboardingCompleted === null) return <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]"><Loader2 className="w-8 h-8 animate-spin text-pink-500" /></div>;
++  if (!onboardingCompleted) return <OnboardingFlow onComplete={() => setOnboardingCompleted(true)} />;
++  
++  return <MainApp />;
+ }

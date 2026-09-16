@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, AlertCircle, TrendingUp, FileText, Briefcase, Download } from 'lucide-react';
@@ -11,54 +11,15 @@ import { ResumeDiffViewer } from './ResumeDiffViewer';
 import { IntelligencePanel } from './IntelligencePanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateOptimizedResume } from '@/lib/docxGenerator';
+import { useAuth } from '@/lib/auth';
 
-export function ATSOptimizer({ 
-  onNavigate,
-  initialAssessment,
-  onClearInitial
-}: { 
-  onNavigate?: (tab: 'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings') => void;
-  initialAssessment?: any;
-  onClearInitial?: () => void;
-}) {
+export function ATSOptimizer({ onNavigate }: { onNavigate?: (tab: 'dashboard' | 'risk' | 'ats' | 'builder' | 'history' | 'pricing' | 'settings') => void }) {
+  const { token } = useAuth();
   const [resumeText, setResumeText] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [analysis, setAnalysis] = useState<ATSAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (initialAssessment) {
-      setResumeText(initialAssessment.resume_text || '');
-      setJobDescription(initialAssessment.job_description || '');
-      setAnalysis({
-        score_before: initialAssessment.ats_score_before,
-        score_after: initialAssessment.ats_score_after,
-        match_level: initialAssessment.match_level,
-        resume_health: initialAssessment.resume_health,
-        interview_prob_before: initialAssessment.interview_prob_before,
-        interview_prob_after: initialAssessment.interview_prob_after,
-        missing_skills: initialAssessment.missing_skills || [],
-        missing_keywords: initialAssessment.missing_keywords || [],
-        hard_skills: initialAssessment.hard_skills || [],
-        soft_skills: initialAssessment.soft_skills || [],
-        formatting_score: initialAssessment.formatting_score,
-        quantified_achievements_score: initialAssessment.quantified_achievements_score,
-        grammar_tone_score: initialAssessment.grammar_tone_score,
-        salary_readiness_score: initialAssessment.salary_readiness_score,
-        salary_band_estimate: initialAssessment.salary_band_estimate,
-        career_gap_risk: initialAssessment.career_gap_risk,
-        keyword_decay: initialAssessment.keyword_decay || [],
-        culture_fit_score: initialAssessment.culture_fit_score,
-        multi_role_conflict: initialAssessment.multi_role_conflict,
-        hiring_manager_profile: initialAssessment.hiring_manager_profile || [],
-        add_lines: initialAssessment.add_lines || [],
-        remove_lines: initialAssessment.remove_lines || [],
-        rewrite_lines: initialAssessment.rewrite_lines || [],
-        impact_prediction: initialAssessment.impact_prediction || { visibility_increase: '', key_improvement: '' }
-      });
-    }
-  }, [initialAssessment]);
 
   const handleAnalyze = async () => {
     if (!resumeText || !jobDescription) {
@@ -84,7 +45,7 @@ export function ATSOptimizer({
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           id: assessmentId,
@@ -104,18 +65,7 @@ export function ATSOptimizer({
           career_gap_risk: result.career_gap_risk,
           culture_fit_score: result.culture_fit_score,
           multi_role_conflict: result.multi_role_conflict,
-          recommendations,
-          // Full fidelity fields:
-          add_lines: result.add_lines,
-          remove_lines: result.remove_lines,
-          rewrite_lines: result.rewrite_lines,
-          missing_skills: result.missing_skills,
-          missing_keywords: result.missing_keywords,
-          hard_skills: result.hard_skills,
-          soft_skills: result.soft_skills,
-          keyword_decay: result.keyword_decay,
-          hiring_manager_profile: result.hiring_manager_profile,
-          impact_prediction: result.impact_prediction
+          recommendations
         })
       });
     } catch (err: any) {
@@ -129,9 +79,6 @@ export function ATSOptimizer({
   const handleReset = () => {
     setAnalysis(null);
     setError(null);
-    setResumeText('');
-    setJobDescription('');
-    onClearInitial?.();
   };
 
   return (
